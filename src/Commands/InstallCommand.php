@@ -30,9 +30,6 @@ class InstallCommand extends Command
         $this->addApiRoutes();
         $this->installSanctum();
 
-        // Mark as installed
-        $this->markAsInstalled();
-
         $this->info('Laravelplate Authentication installed successfully!');
     }
 
@@ -190,15 +187,13 @@ class InstallCommand extends Command
                 $existingFields = $fieldMatches[1];
             }
             
-            // Merge fields maintaining the exact order from orderedFields
-            $finalFields = [];
-            foreach ($orderedFields as $field) {
-                $finalFields[] = $field;
-            }
+            // Start with ordered fields
+            $finalFields = $orderedFields;
             
-            // Add any existing fields that aren't in orderedFields (to preserve custom fields)
+            // Add any existing custom fields that aren't in orderedFields
+            // but exclude 'name' since it's being replaced by first_name, middle_name, last_name
             foreach ($existingFields as $existingField) {
-                if (!in_array($existingField, $finalFields)) {
+                if (!in_array($existingField, $finalFields) && $existingField !== 'name') {
                     $finalFields[] = $existingField;
                 }
             }
@@ -246,8 +241,8 @@ class InstallCommand extends Command
             }
             
             if ($methodName && !str_contains($content, "function {$methodName}(")) {
-                // Add method before the closing class brace
-                $content = preg_replace('/^}$/m', "    {$method}\n}", $content);
+                // Add method with proper spacing before the closing class brace
+                $content = preg_replace('/^}$/m', "\n    {$method}\n}", $content);
             }
         }
         
@@ -295,18 +290,19 @@ class InstallCommand extends Command
 
     protected function isAlreadyInstalled()
     {
-        return File::exists(base_path('.laravelplate-auth-installed'));
-    }
-
-    protected function markAsInstalled()
-    {
-        File::put(base_path('.laravelplate-auth-installed'), now()->toDateTimeString());
+        // Check if key files from the package already exist
+        return File::exists(app_path('Models/Role.php')) && 
+               File::exists(app_path('Models/UserStatus.php')) &&
+               File::exists(app_path('Models/User.php')) &&
+               File::exists(database_path('migrations/2014_09_25_055221_create_roles_table.php')) &&
+               File::exists(database_path('migrations/2014_09_26_034833_create_user_statuses_table.php')) &&
+               File::exists(database_path('migrations/2014_10_12_000000_create_users_table.php'));
     }
 
     protected function addApiRoutes()
     {
         $apiRoutesPath = base_path('routes/api.php');
-        $routesToAdd = file_get_contents(__DIR__.'/../Stubs/api_routes.stub');
+        $stubContent = file_get_contents(__DIR__.'/../Stubs/api_routes.stub');
 
         if (!File::exists($apiRoutesPath)) {
             $this->error('API routes file not found!');
@@ -326,14 +322,28 @@ class InstallCommand extends Command
         if (!str_contains($existingRoutes, 'AuthenticationController') && 
             !str_contains($existingRoutes, '/register-account')) {
             
-            // Find the position to insert the import (after existing imports but before the comment block)
-            $pattern = '/(use\s+[^;]+;\s*\n)+/';
-            if (preg_match($pattern, $existingRoutes, $matches, PREG_OFFSET_CAPTURE)) {
-                $insertPosition = $matches[0][1] + strlen($matches[0][0]);
-                $newContent = substr_replace($existingRoutes, $routesToAdd . "\n", $insertPosition, 0);
+            // Extract import and routes from stub
+            $stubLines = explode("\n", $stubContent);
+            $import = $stubLines[0]; // use App\Http\Controllers\AuthenticationController;
+            $routes = implode("\n", array_slice($stubLines, 2)); // Skip import and empty line
+            
+            // Add import after existing imports (no blank line)
+            $pattern = '/(use\s+[^;]+;\s*\n)/';
+            if (preg_match_all($pattern, $existingRoutes, $matches, PREG_OFFSET_CAPTURE)) {
+                $lastImportEnd = end($matches[0])[1] + strlen(end($matches[0])[0]);
+                $newContent = substr_replace($existingRoutes, $import . "\n", $lastImportEnd, 0);
             } else {
-                // Fallback: append to the end
-                $newContent = $existingRoutes . "\n" . $routesToAdd;
+                $newContent = $existingRoutes;
+            }
+            
+            // Add routes after the comment block
+            $commentPattern = '/\/\*\s*\|[-]+\|\s*\|\s*API Routes.*?\*\//s';
+            if (preg_match($commentPattern, $newContent, $commentMatches, PREG_OFFSET_CAPTURE)) {
+                $commentEnd = $commentMatches[0][1] + strlen($commentMatches[0][0]);
+                $newContent = substr_replace($newContent, "\n\n" . $routes, $commentEnd, 0);
+            } else {
+                // Fallback: append routes to the end
+                $newContent .= "\n\n" . $routes;
             }
             
             File::put($apiRoutesPath, $newContent);

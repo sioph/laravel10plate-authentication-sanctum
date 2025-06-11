@@ -12,6 +12,22 @@ A modular Laravel Sanctum authentication package for the Laravelplate boilerplat
 - **Auto-generated Migrations, Models, and Controllers**
 - **Pre-configured Admin Account**
 
+## ⚠️ Important Warning
+
+> **🚨 RECOMMENDED FOR FRESH PROJECTS ONLY**
+> 
+> This package is designed to work best with **fresh Laravel 10 installations** that do not have existing authentication features. Installing this package on projects with existing authentication systems may cause conflicts or unexpected behavior.
+>
+> **Before Installation:**
+> - Ensure you're using **Laravel 10.x**
+> - Verify you don't have existing authentication scaffolding (Laravel Breeze, Jetstream, UI, etc.)
+> - Consider using this package on a **newly created Laravel project** for best results
+> - Backup your project before installation if you have existing authentication code
+>
+> **If you have existing authentication:**
+> - Review the conflicts that may arise with your current User model and migrations
+> - Test thoroughly in a development environment before deploying to production
+
 ## 📋 Requirements
 
 - PHP ^8.1
