@@ -20,7 +20,7 @@ class AuthenticationController extends Controller
             'middle_name' => ['nullable', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            'mobile_number' => ['required', 'string', 'max:20', 'unique:users'],
+            'contact_number' => ['required', 'string', 'max:20', 'unique:users'],
             'password' => ['required', 'confirmed', Password::defaults()],
         ]);
 
@@ -32,7 +32,7 @@ class AuthenticationController extends Controller
             'middle_name' => $request->middle_name,
             'last_name' => $request->last_name,
             'email' => $request->email,
-            'mobile_number' => $request->mobile_number,
+            'contact_number' => $request->contact_number,
             'password' => Hash::make($request->password),
             'role_id' => $staffRole->id,
             'user_status_id' => $activeStatus->id,
