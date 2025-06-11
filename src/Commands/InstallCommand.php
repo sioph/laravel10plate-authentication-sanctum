@@ -108,7 +108,7 @@ class InstallCommand extends Command
         $existingContent = File::get($migrationPath);
         
         // Check if already modified
-        if ($this->isAlreadyModified($existingContent)) {
+        if ($this->isAlreadyModified($existingContent, ['role_id', 'user_status_id', 'Hash::make', 'User::create'])) {
             $this->warn('Users migration appears to already have Laravelplate modifications. Skipping...');
             return;
         }
@@ -118,28 +118,44 @@ class InstallCommand extends Command
 
         $packageMigrationContent = File::get(__DIR__.'/../Migrations/2014_10_12_000000_create_users_table.php');
         
-        // Extract the entire up() method content from package migration
-        preg_match('/public function up\(\): void\s*\{(.*?)\}/s', $packageMigrationContent, $matches);
+        // Extract the entire up() method content from package migration (more flexible pattern)
+        preg_match('/public\s+function\s+up\s*\(\s*\)\s*:\s*void\s*\{(.*?)\n\s*\}/s', $packageMigrationContent, $matches);
         
         if (isset($matches[1])) {
             $newUpMethodContent = $matches[1];
             
-            // Replace the existing up() method content
-            $pattern = '/(public function up\(\): void\s*\{)(.*?)(\})/s';
+            // Replace the existing up() method content (more flexible pattern)
+            $pattern = '/(public\s+function\s+up\s*\(\s*\)\s*:\s*void\s*\{)(.*?)(\n\s*\})/s';
             $replacement = '$1' . $newUpMethodContent . '$3';
             $modifiedContent = preg_replace($pattern, $replacement, $existingContent);
             
-            // Add the Hash import if not present
-            if (!str_contains($modifiedContent, 'use Illuminate\Support\Facades\Hash;')) {
-                $modifiedContent = str_replace(
-                    'use Illuminate\Support\Facades\Schema;',
-                    "use Illuminate\Support\Facades\Schema;\nuse Illuminate\Support\Facades\Hash;\nuse App\Models\User;",
-                    $modifiedContent
-                );
+            // Add required imports if not present
+            $imports = [
+                'use Illuminate\Support\Facades\Hash;',
+                'use App\Models\User;'
+            ];
+            
+            foreach ($imports as $import) {
+                if (!str_contains($modifiedContent, $import)) {
+                    // Find the last use statement
+                    if (preg_match('/^(use [^;]+;)$/m', $modifiedContent, $importMatches, PREG_OFFSET_CAPTURE)) {
+                        $lastImportEnd = end($importMatches)[1] + strlen(end($importMatches)[0]);
+                        $modifiedContent = substr_replace($modifiedContent, "\n" . $import, $lastImportEnd, 0);
+                    } else {
+                        // Fallback: add after Schema import
+                        $modifiedContent = str_replace(
+                            'use Illuminate\Support\Facades\Schema;',
+                            "use Illuminate\Support\Facades\Schema;\n" . $import,
+                            $modifiedContent
+                        );
+                    }
+                }
             }
             
             File::put($migrationPath, $modifiedContent);
             $this->info('Users migration updated successfully!');
+        } else {
+            $this->error('Could not extract up() method content from package migration.');
         }
     }
 
@@ -327,11 +343,16 @@ class InstallCommand extends Command
             $import = $stubLines[0]; // use App\Http\Controllers\AuthenticationController;
             $routes = implode("\n", array_slice($stubLines, 2)); // Skip import and empty line
             
-            // Add import after existing imports (no blank line)
-            $pattern = '/(use\s+[^;]+;\s*\n)/';
-            if (preg_match_all($pattern, $existingRoutes, $matches, PREG_OFFSET_CAPTURE)) {
-                $lastImportEnd = end($matches[0])[1] + strlen(end($matches[0])[0]);
-                $newContent = substr_replace($existingRoutes, $import . "\n", $lastImportEnd, 0);
+            // Add import after existing imports
+            if (!str_contains($existingRoutes, $import)) {
+                $pattern = '/(use\s+[^;]+;\s*\n)/';
+                if (preg_match_all($pattern, $existingRoutes, $matches, PREG_OFFSET_CAPTURE)) {
+                    $lastImportEnd = end($matches[0])[1] + strlen(end($matches[0])[0]);
+                    $newContent = substr_replace($existingRoutes, $import . "\n", $lastImportEnd, 0);
+                } else {
+                    // No use statements found, add after <?php
+                    $newContent = str_replace('<?php', "<?php\n\n" . $import, $existingRoutes);
+                }
             } else {
                 $newContent = $existingRoutes;
             }
@@ -341,13 +362,19 @@ class InstallCommand extends Command
             if (preg_match($commentPattern, $newContent, $commentMatches, PREG_OFFSET_CAPTURE)) {
                 $commentEnd = $commentMatches[0][1] + strlen($commentMatches[0][0]);
                 
-                // Find and remove excessive whitespace after comment block
+                // Find what comes after the comment block
                 $afterComment = substr($newContent, $commentEnd);
-                $trimmedAfterComment = ltrim($afterComment, " \t\n\r");
+                
+                // Remove all whitespace until we find the first non-whitespace character or end of file
+                $trimmedAfterComment = ltrim($afterComment);
                 $whitespaceLength = strlen($afterComment) - strlen($trimmedAfterComment);
                 
-                // Replace excessive whitespace with exactly one blank line and add routes
-                $newContent = substr_replace($newContent, "\n\n" . $routes, $commentEnd, $whitespaceLength);
+                // If there's existing content after comment, add exactly one blank line
+                // If no content after comment, add two newlines (one blank line)
+                $spacing = empty($trimmedAfterComment) ? "\n\n" : "\n\n";
+                
+                // Replace excessive whitespace with proper spacing and add routes
+                $newContent = substr_replace($newContent, $spacing . $routes, $commentEnd, $whitespaceLength);
             } else {
                 // Fallback: append routes to the end
                 $newContent .= "\n\n" . $routes;
