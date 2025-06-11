@@ -118,14 +118,53 @@ class InstallCommand extends Command
 
         $packageMigrationContent = File::get(__DIR__.'/../Migrations/2014_10_12_000000_create_users_table.php');
         
-        // Extract the entire up() method from package migration using a more robust pattern
-        if (preg_match('/public function up\(\): void\s*\{(.*?)\n\s*\}/s', $packageMigrationContent, $matches)) {
-            $newUpMethodContent = trim($matches[1]);
+        // Find the start and end positions of the up() method in the package migration
+        $startPos = strpos($packageMigrationContent, 'public function up(): void');
+        if ($startPos === false) {
+            $this->error('Could not find up() method in package migration.');
+            return;
+        }
+        
+        // Find the opening brace after the method declaration
+        $openBracePos = strpos($packageMigrationContent, '{', $startPos);
+        if ($openBracePos === false) {
+            $this->error('Could not find opening brace for up() method.');
+            return;
+        }
+        
+        // Find the matching closing brace by counting braces
+        $braceCount = 1;
+        $pos = $openBracePos + 1;
+        $closingBracePos = false;
+        
+        while ($pos < strlen($packageMigrationContent) && $braceCount > 0) {
+            $char = $packageMigrationContent[$pos];
+            if ($char === '{') {
+                $braceCount++;
+            } elseif ($char === '}') {
+                $braceCount--;
+                if ($braceCount === 0) {
+                    $closingBracePos = $pos;
+                    break;
+                }
+            }
+            $pos++;
+        }
+        
+        if ($closingBracePos === false) {
+            $this->error('Could not find closing brace for up() method.');
+            return;
+        }
+        
+        // Extract the method content (everything between the braces)
+        $newUpMethodContent = substr($packageMigrationContent, $openBracePos + 1, $closingBracePos - $openBracePos - 1);
+        
+        // Now replace the existing up() method content
+        if (preg_match('/(public function up\(\): void\s*\{)(.*?)(\n\s*\})/s', $existingContent, $matches, PREG_OFFSET_CAPTURE)) {
+            $beforeMethod = substr($existingContent, 0, $matches[1][1] + strlen($matches[1][0]));
+            $afterMethod = substr($existingContent, $matches[3][1]);
             
-            // Replace the existing up() method content completely
-            $pattern = '/(public function up\(\): void\s*\{).*?(\n\s*\})/s';
-            $replacement = '$1' . "\n" . $newUpMethodContent . '$2';
-            $modifiedContent = preg_replace($pattern, $replacement, $existingContent);
+            $modifiedContent = $beforeMethod . $newUpMethodContent . $afterMethod;
             
             // Add required imports if not present
             $imports = [
@@ -154,7 +193,7 @@ class InstallCommand extends Command
             File::put($migrationPath, $modifiedContent);
             $this->info('Users migration updated successfully!');
         } else {
-            $this->error('Could not extract up() method content from package migration.');
+            $this->error('Could not find up() method in existing migration.');
         }
     }
 
@@ -368,15 +407,11 @@ class InstallCommand extends Command
                 $trimmedAfterComment = ltrim($afterComment);
                 $whitespaceLength = strlen($afterComment) - strlen($trimmedAfterComment);
                 
-                // If there's existing content after comment, add exactly one blank line
-                // If no content after comment, add two newlines (one blank line)
-                $spacing = empty($trimmedAfterComment) ? "\n" : "\n";
-                
                 // Replace excessive whitespace with proper spacing and add routes
-                $newContent = substr_replace($newContent, $spacing . $routes, $commentEnd, $whitespaceLength);
+                $newContent = substr_replace($newContent, $routes, $commentEnd, $whitespaceLength);
             } else {
                 // Fallback: append routes to the end
-                $newContent .= "\n" . $routes;
+                $newContent .= $routes;
             }
             
             File::put($apiRoutesPath, $newContent);
