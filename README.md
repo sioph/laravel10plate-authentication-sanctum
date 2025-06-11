@@ -23,7 +23,7 @@ A modular Laravel Sanctum authentication package for the Laravelplate boilerplat
 ### Step 1: Install the Package
 
 ```bash
-composer require cilinjohnrey/laravelplate-authentication-sanctum
+composer require sioph/laravelplate-authentication-sanctum
 ```
 
 ### Step 2: Run Smart Installation Command
