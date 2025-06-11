@@ -1,5 +1,5 @@
 {
-    "name": "cilinjohnrey/laravelplate-authentication-sanctum",
+    "name": "sioph/laravelplate-authentication-sanctum",
     "description": "Laravel Sanctum authentication package for Laravelplate boilerplate",
     "type": "library",
     "license": "MIT",
