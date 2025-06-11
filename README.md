@@ -40,6 +40,32 @@ php artisan laravelplate:install-auth
 php artisan migrate
 ```
 
+## 📋 Backup Files Management
+
+During installation, the package automatically creates backup files of your existing models and migrations to prevent data loss:
+
+### Backup Location:
+- `app/Models/User.php.backup` - Backup of your original User model
+- `database/migrations/*_create_users_table.php.backup` - Backup of your original users migration
+
+### After Installation:
+1. **Verify the installation** - Check that your User model and migration are working correctly
+2. **Test the functionality** - Ensure authentication is working as expected
+3. **Review the changes** - Compare the modified files with the backup files
+4. **Clean up backups** - Once you've verified everything is working correctly, you can safely delete the backup files:
+
+```bash
+# Remove User model backup (after verification)
+rm app/Models/User.php.backup
+
+# Remove migration backup (after verification)
+rm database/migrations/*_create_users_table.php.backup
+```
+
+> 💡 **Tip**: Keep backup files until you're completely satisfied with the installation. They serve as a safety net in case you need to revert changes.
+
+> ⚠️ **Important**: Only delete backup files after thorough testing in your development environment.
+
 ## 📁 What Gets Installed
 
 ### Migrations:
