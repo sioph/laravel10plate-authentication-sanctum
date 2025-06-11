@@ -118,15 +118,13 @@ class InstallCommand extends Command
 
         $packageMigrationContent = File::get(__DIR__.'/../Migrations/2014_10_12_000000_create_users_table.php');
         
-        // Extract the entire up() method content from package migration (more flexible pattern)
-        preg_match('/public\s+function\s+up\s*\(\s*\)\s*:\s*void\s*\{(.*?)\n\s*\}/s', $packageMigrationContent, $matches);
-        
-        if (isset($matches[1])) {
-            $newUpMethodContent = $matches[1];
+        // Extract the entire up() method from package migration using a more robust pattern
+        if (preg_match('/public function up\(\): void\s*\{(.*?)\n\s*\}/s', $packageMigrationContent, $matches)) {
+            $newUpMethodContent = trim($matches[1]);
             
-            // Replace the existing up() method content (more flexible pattern)
-            $pattern = '/(public\s+function\s+up\s*\(\s*\)\s*:\s*void\s*\{)(.*?)(\n\s*\})/s';
-            $replacement = '$1' . $newUpMethodContent . '$3';
+            // Replace the existing up() method content completely
+            $pattern = '/(public function up\(\): void\s*\{).*?(\n\s*\})/s';
+            $replacement = '$1' . "\n" . $newUpMethodContent . '$2';
             $modifiedContent = preg_replace($pattern, $replacement, $existingContent);
             
             // Add required imports if not present
@@ -137,10 +135,11 @@ class InstallCommand extends Command
             
             foreach ($imports as $import) {
                 if (!str_contains($modifiedContent, $import)) {
-                    // Find the last use statement
-                    if (preg_match('/^(use [^;]+;)$/m', $modifiedContent, $importMatches, PREG_OFFSET_CAPTURE)) {
-                        $lastImportEnd = end($importMatches)[1] + strlen(end($importMatches)[0]);
-                        $modifiedContent = substr_replace($modifiedContent, "\n" . $import, $lastImportEnd, 0);
+                    // Find the position after the last use statement
+                    if (preg_match_all('/^use [^;]+;$/m', $modifiedContent, $importMatches, PREG_OFFSET_CAPTURE)) {
+                        $lastImport = end($importMatches[0]);
+                        $insertPosition = $lastImport[1] + strlen($lastImport[0]);
+                        $modifiedContent = substr_replace($modifiedContent, "\n" . $import, $insertPosition, 0);
                     } else {
                         // Fallback: add after Schema import
                         $modifiedContent = str_replace(
@@ -371,13 +370,13 @@ class InstallCommand extends Command
                 
                 // If there's existing content after comment, add exactly one blank line
                 // If no content after comment, add two newlines (one blank line)
-                $spacing = empty($trimmedAfterComment) ? "\n\n" : "\n\n";
+                $spacing = empty($trimmedAfterComment) ? "\n" : "\n";
                 
                 // Replace excessive whitespace with proper spacing and add routes
                 $newContent = substr_replace($newContent, $spacing . $routes, $commentEnd, $whitespaceLength);
             } else {
                 // Fallback: append routes to the end
-                $newContent .= "\n\n" . $routes;
+                $newContent .= "\n" . $routes;
             }
             
             File::put($apiRoutesPath, $newContent);
