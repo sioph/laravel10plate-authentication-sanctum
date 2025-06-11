@@ -1,0 +1,30 @@
+{
+    "name": "cilinjohnrey/laravelplate-authentication-sanctum",
+    "description": "Laravel Sanctum authentication package for Laravelplate boilerplate",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Cilin, John Rey",
+            "email": "cilinjohnrey@gmail.com"
+        }
+    ],
+    "require": {
+        "php": "^8.1",
+        "laravel/framework": "^10.0",
+        "laravel/sanctum": "^3.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Laravelplate\\Authentication\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Laravelplate\\Authentication\\LaravelplateAuthenticationServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "stable"
+}

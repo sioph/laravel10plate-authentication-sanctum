@@ -1,0 +1,9 @@
+// Laravelplate Authentication Routes
+use App\Http\Controllers\AuthenticationController;
+
+Route::post('/register-account', [AuthenticationController::class, 'registerAccount']);
+Route::post('/login', [AuthenticationController::class, 'login']);
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/logout', [AuthenticationController::class, 'logout']);
+});
