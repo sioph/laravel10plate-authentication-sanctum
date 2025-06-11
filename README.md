@@ -50,7 +50,22 @@ php artisan laravelplate:install-auth
 
 > 💡 **Smart Installation**: The installer automatically detects existing `User.php` model and users migration, then merges required code instead of overwriting. Backup files are created automatically.
 
-### Step 3: Run Migrations
+### Step 3: Configure Database Connection
+
+Configure your database in the `.env` file:
+
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=your_database_name
+DB_USERNAME=your_database_username
+DB_PASSWORD=your_database_password
+```
+
+> 📝 **Note**: Make sure your database exists and the credentials are correct before proceeding to the next step.
+
+### Step 4: Run Migrations
 
 ```bash
 php artisan migrate

@@ -340,7 +340,7 @@ class InstallCommand extends Command
             $commentPattern = '/\/\*\s*\|[-]+\|\s*\|\s*API Routes.*?\*\//s';
             if (preg_match($commentPattern, $newContent, $commentMatches, PREG_OFFSET_CAPTURE)) {
                 $commentEnd = $commentMatches[0][1] + strlen($commentMatches[0][0]);
-                $newContent = substr_replace($newContent, "\n\n" . $routes, $commentEnd, 0);
+                $newContent = substr_replace($newContent, "\n" . $routes, $commentEnd, 0);
             } else {
                 // Fallback: append routes to the end
                 $newContent .= "\n\n" . $routes;
