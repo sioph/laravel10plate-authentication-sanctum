@@ -1,4 +1,3 @@
-// Laravelplate Authentication Routes
 use App\Http\Controllers\AuthenticationController;
 
 Route::post('/register-account', [AuthenticationController::class, 'registerAccount']);

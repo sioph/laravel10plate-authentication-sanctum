@@ -63,13 +63,15 @@ class InstallCommand extends Command
         // Create backup
         $this->createBackup($userModelPath);
 
-        // Merge fillable fields
-        $requiredFillable = [
+        // Merge fillable fields in exact order
+        $orderedFillable = [
             'first_name', 'middle_name', 'last_name', 'contact_number',
-            'role_id', 'user_status_id', 'password_reset_token', 'password_reset_expires_at'
+            'email', 'password', 'role_id', 'user_status_id', 
+            'password_reset_token', 'password_reset_expires_at',
+            'email_verified_at', 'remember_token'
         ];
         
-        $existingContent = $this->addFillableFields($existingContent, $requiredFillable);
+        $existingContent = $this->addFillableFields($existingContent, $orderedFillable);
         
         // Add relationships and methods
         $relationshipsAndMethods = $this->extractRelationshipsAndMethods($packageUserContent);
@@ -175,7 +177,7 @@ class InstallCommand extends Command
         ]);
     }
 
-    protected function addFillableFields($content, $requiredFields)
+    protected function addFillableFields($content, $orderedFields)
     {
         // Find existing fillable array
         if (preg_match('/protected \$fillable = \[(.*?)\];/s', $content, $matches)) {
@@ -188,19 +190,26 @@ class InstallCommand extends Command
                 $existingFields = $fieldMatches[1];
             }
             
-            // Add missing fields
-            $fieldsToAdd = array_diff($requiredFields, $existingFields);
-            
-            if (!empty($fieldsToAdd)) {
-                $newFields = array_merge($existingFields, $fieldsToAdd);
-                $newFillableString = "[\n        '" . implode("',\n        '", $newFields) . "',\n    ]";
-                
-                $content = preg_replace(
-                    '/protected \$fillable = \[.*?\];/s',
-                    "protected \$fillable = {$newFillableString};",
-                    $content
-                );
+            // Merge fields maintaining the exact order from orderedFields
+            $finalFields = [];
+            foreach ($orderedFields as $field) {
+                $finalFields[] = $field;
             }
+            
+            // Add any existing fields that aren't in orderedFields (to preserve custom fields)
+            foreach ($existingFields as $existingField) {
+                if (!in_array($existingField, $finalFields)) {
+                    $finalFields[] = $existingField;
+                }
+            }
+            
+            $newFillableString = "[\n        '" . implode("',\n        '", $finalFields) . "',\n    ]";
+            
+            $content = preg_replace(
+                '/protected \$fillable = \[.*?\];/s',
+                "protected \$fillable = {$newFillableString};",
+                $content
+            );
         }
         
         return $content;
@@ -306,13 +315,33 @@ class InstallCommand extends Command
 
         $existingRoutes = File::get($apiRoutesPath);
         
+        // Remove the default /user route if it exists
+        $existingRoutes = preg_replace(
+            '/Route::middleware\([\'"]auth:sanctum[\'"]\)->get\([\'"]\/user[\'"], function \(Request \$request\) \{.*?\}\);/s',
+            '',
+            $existingRoutes
+        );
+        
+        // Check if authentication routes already exist
         if (!str_contains($existingRoutes, 'AuthenticationController') && 
             !str_contains($existingRoutes, '/register-account')) {
             
-            File::append($apiRoutesPath, "\n" . $routesToAdd);
+            // Find the position to insert the import (after existing imports but before the comment block)
+            $pattern = '/(use\s+[^;]+;\s*\n)+/';
+            if (preg_match($pattern, $existingRoutes, $matches, PREG_OFFSET_CAPTURE)) {
+                $insertPosition = $matches[0][1] + strlen($matches[0][0]);
+                $newContent = substr_replace($existingRoutes, $routesToAdd . "\n", $insertPosition, 0);
+            } else {
+                // Fallback: append to the end
+                $newContent = $existingRoutes . "\n" . $routesToAdd;
+            }
+            
+            File::put($apiRoutesPath, $newContent);
             $this->info('API routes added successfully!');
         } else {
-            $this->warn('API routes already exist. Skipping...');
+            // Even if routes exist, still remove the default /user route
+            File::put($apiRoutesPath, $existingRoutes);
+            $this->warn('API routes already exist. Skipping addition but cleaned up default routes...');
         }
     }
 
