@@ -116,85 +116,37 @@ class InstallCommand extends Command
         // Create backup
         $this->createBackup($migrationPath);
 
+        // Simply replace the entire content with the package version since it's proven to work
         $packageMigrationContent = File::get(__DIR__.'/../Migrations/2014_10_12_000000_create_users_table.php');
         
-        // Find the start and end positions of the up() method in the package migration
-        $startPos = strpos($packageMigrationContent, 'public function up(): void');
-        if ($startPos === false) {
-            $this->error('Could not find up() method in package migration.');
-            return;
-        }
+        // Add required imports if not present in package content
+        $imports = [
+            'use Illuminate\Support\Facades\Hash;',
+            'use App\Models\User;'
+        ];
         
-        // Find the opening brace after the method declaration
-        $openBracePos = strpos($packageMigrationContent, '{', $startPos);
-        if ($openBracePos === false) {
-            $this->error('Could not find opening brace for up() method.');
-            return;
-        }
+        $modifiedContent = $packageMigrationContent;
         
-        // Find the matching closing brace by counting braces
-        $braceCount = 1;
-        $pos = $openBracePos + 1;
-        $closingBracePos = false;
-        
-        while ($pos < strlen($packageMigrationContent) && $braceCount > 0) {
-            $char = $packageMigrationContent[$pos];
-            if ($char === '{') {
-                $braceCount++;
-            } elseif ($char === '}') {
-                $braceCount--;
-                if ($braceCount === 0) {
-                    $closingBracePos = $pos;
-                    break;
+        foreach ($imports as $import) {
+            if (!str_contains($modifiedContent, $import)) {
+                // Find the position after the last use statement
+                if (preg_match_all('/^use [^;]+;$/m', $modifiedContent, $importMatches, PREG_OFFSET_CAPTURE)) {
+                    $lastImport = end($importMatches[0]);
+                    $insertPosition = $lastImport[1] + strlen($lastImport[0]);
+                    $modifiedContent = substr_replace($modifiedContent, "\n" . $import, $insertPosition, 0);
+                } else {
+                    // Fallback: add after Schema import
+                    $modifiedContent = str_replace(
+                        'use Illuminate\Support\Facades\Schema;',
+                        "use Illuminate\Support\Facades\Schema;\n" . $import,
+                        $modifiedContent
+                    );
                 }
             }
-            $pos++;
         }
         
-        if ($closingBracePos === false) {
-            $this->error('Could not find closing brace for up() method.');
-            return;
-        }
-        
-        // Extract the method content (everything between the braces)
-        $newUpMethodContent = substr($packageMigrationContent, $openBracePos + 1, $closingBracePos - $openBracePos - 1);
-        
-        // Now replace the existing up() method content
-        if (preg_match('/(public function up\(\): void\s*\{)(.*?)(\n\s*\})/s', $existingContent, $matches, PREG_OFFSET_CAPTURE)) {
-            $beforeMethod = substr($existingContent, 0, $matches[1][1] + strlen($matches[1][0]));
-            $afterMethod = substr($existingContent, $matches[3][1]);
-            
-            $modifiedContent = $beforeMethod . $newUpMethodContent . $afterMethod;
-            
-            // Add required imports if not present
-            $imports = [
-                'use Illuminate\Support\Facades\Hash;',
-                'use App\Models\User;'
-            ];
-            
-            foreach ($imports as $import) {
-                if (!str_contains($modifiedContent, $import)) {
-                    // Find the position after the last use statement
-                    if (preg_match_all('/^use [^;]+;$/m', $modifiedContent, $importMatches, PREG_OFFSET_CAPTURE)) {
-                        $lastImport = end($importMatches[0]);
-                        $insertPosition = $lastImport[1] + strlen($lastImport[0]);
-                        $modifiedContent = substr_replace($modifiedContent, "\n" . $import, $insertPosition, 0);
-                    } else {
-                        // Fallback: add after Schema import
-                        $modifiedContent = str_replace(
-                            'use Illuminate\Support\Facades\Schema;',
-                            "use Illuminate\Support\Facades\Schema;\n" . $import,
-                            $modifiedContent
-                        );
-                    }
-                }
-            }
-            
-            File::put($migrationPath, $modifiedContent);
-            $this->info('Users migration updated successfully!');
-        } else {
-            $this->error('Could not find up() method in existing migration.');
-        }
+        File::put($migrationPath, $modifiedContent);
+        $this->info('Users migration replaced successfully!');
     }
 
     protected function publishOtherFiles()
