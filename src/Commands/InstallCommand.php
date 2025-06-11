@@ -118,15 +118,15 @@ class InstallCommand extends Command
 
         $packageMigrationContent = File::get(__DIR__.'/../Migrations/2014_10_12_000000_create_users_table.php');
         
-        // Extract the table schema from package migration
-        preg_match('/Schema::create\(\'users\', function \(Blueprint \$table\) \{(.*?)\}\);/s', $packageMigrationContent, $matches);
+        // Extract the entire up() method content from package migration
+        preg_match('/public function up\(\): void\s*\{(.*?)\}/s', $packageMigrationContent, $matches);
         
         if (isset($matches[1])) {
-            $newTableSchema = $matches[1];
+            $newUpMethodContent = $matches[1];
             
-            // Replace the existing table schema
-            $pattern = '/(Schema::create\(\'users\', function \(Blueprint \$table\) \{)(.*?)(\}\);)/s';
-            $replacement = '$1' . $newTableSchema . '$3';
+            // Replace the existing up() method content
+            $pattern = '/(public function up\(\): void\s*\{)(.*?)(\})/s';
+            $replacement = '$1' . $newUpMethodContent . '$3';
             $modifiedContent = preg_replace($pattern, $replacement, $existingContent);
             
             // Add the Hash import if not present
@@ -340,7 +340,14 @@ class InstallCommand extends Command
             $commentPattern = '/\/\*\s*\|[-]+\|\s*\|\s*API Routes.*?\*\//s';
             if (preg_match($commentPattern, $newContent, $commentMatches, PREG_OFFSET_CAPTURE)) {
                 $commentEnd = $commentMatches[0][1] + strlen($commentMatches[0][0]);
-                $newContent = substr_replace($newContent, "\n" . $routes, $commentEnd, 0);
+                
+                // Find and remove excessive whitespace after comment block
+                $afterComment = substr($newContent, $commentEnd);
+                $trimmedAfterComment = ltrim($afterComment, " \t\n\r");
+                $whitespaceLength = strlen($afterComment) - strlen($trimmedAfterComment);
+                
+                // Replace excessive whitespace with exactly one blank line and add routes
+                $newContent = substr_replace($newContent, "\n\n" . $routes, $commentEnd, $whitespaceLength);
             } else {
                 // Fallback: append routes to the end
                 $newContent .= "\n\n" . $routes;
