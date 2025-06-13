@@ -1,6 +1,6 @@
-# Laravelplate Authentication Sanctum
+# Laravel10plate Authentication Sanctum
 
-A modular Laravel Sanctum authentication package for the Laravelplate boilerplate system. This package provides a complete authentication system with user management, role-based access, and API token authentication.
+A modular Laravel Sanctum authentication package for the Laravel10plate boilerplate system. This package provides a complete authentication system with user management, role-based access, and API token authentication.
 
 ## 🚀 Features
 
@@ -39,13 +39,13 @@ A modular Laravel Sanctum authentication package for the Laravelplate boilerplat
 ### Step 1: Install the Package
 
 ```bash
-composer require sioph/laravelplate-authentication-sanctum
+composer require sioph/laravel10plate-authentication-sanctum
 ```
 
 ### Step 2: Run Smart Installation Command
 
 ```bash
-php artisan laravelplate:install-auth
+php artisan laravel10plate:install-auth
 ```
 
 > 💡 **Smart Installation**: The installer automatically detects existing `User.php` model and users migration, then merges required code instead of overwriting. Backup files are created automatically.
@@ -234,10 +234,10 @@ If you accidentally run the install command again:
 
 ```bash
 # Will show warning if already installed
-php artisan laravelplate:install-auth
+php artisan laravel10plate:install-auth
 
 # Force reinstall (overwrites existing files)
-php artisan laravelplate:install-auth --force
+php artisan laravel10plate:install-auth --force
 ```
 
 ## 🛡 Security Features
@@ -328,4 +328,4 @@ This package is open-sourced software licensed under the [MIT license](LICENSE).
 
 - Laravel team for the amazing framework
 - Laravel Sanctum for secure API authentication
-- Laravelplate boilerplate system contributors
+- Laravel10plate boilerplate system contributors

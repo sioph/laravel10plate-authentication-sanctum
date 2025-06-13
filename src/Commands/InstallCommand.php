@@ -1,6 +1,6 @@
 <?php
 
-namespace Laravelplate\Authentication\Commands;
+namespace Laravel10plate\Authentication\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
@@ -9,19 +9,19 @@ use Illuminate\Support\Str;
 class InstallCommand extends Command
 {
     use FileMerger;
-    protected $signature = 'laravelplate:install-auth {--force : Force installation even if already installed}';
-    protected $description = 'Install Laravelplate Authentication package';
+    protected $signature = 'laravel10plate:install-auth {--force : Force installation even if already installed}';
+    protected $description = 'Install Laravel10plate Authentication package';
 
     public function handle()
     {
         // Check if already installed
         if ($this->isAlreadyInstalled() && !$this->option('force')) {
-            $this->warn('Laravelplate Authentication is already installed!');
-            $this->info('Use --force flag to reinstall: php artisan laravelplate:install-auth --force');
+            $this->warn('Laravel10plate Authentication is already installed!');
+            $this->info('Use --force flag to reinstall: php artisan laravel10plate:install-auth --force');
             return;
         }
 
-        $this->info('Installing Laravelplate Authentication...');
+        $this->info('Installing Laravel10plate Authentication...');
 
         // Smart installation
         $this->handleUserModel();
@@ -30,7 +30,7 @@ class InstallCommand extends Command
         $this->addApiRoutes();
         $this->installSanctum();
 
-        $this->info('Laravelplate Authentication installed successfully!');
+        $this->info('Laravel10plate Authentication installed successfully!');
     }
 
     protected function handleUserModel()
@@ -53,7 +53,7 @@ class InstallCommand extends Command
         
         // Check if already merged
         if ($this->isAlreadyModified($existingContent)) {
-            $this->warn('User model appears to already have Laravelplate modifications. Skipping...');
+            $this->warn('User model appears to already have Laravel10plate modifications. Skipping...');
             return;
         }
 
@@ -109,7 +109,7 @@ class InstallCommand extends Command
         
         // Check if already modified
         if ($this->isAlreadyModified($existingContent, ['role_id', 'user_status_id', 'Hash::make', 'User::create'])) {
-            $this->warn('Users migration appears to already have Laravelplate modifications. Skipping...');
+            $this->warn('Users migration appears to already have Laravel10plate modifications. Skipping...');
             return;
         }
 
@@ -153,7 +153,7 @@ class InstallCommand extends Command
     {
         // Publish other models (Role, UserStatus)
         $this->call('vendor:publish', [
-            '--tag' => 'laravelplate-auth-models',
+            '--tag' => 'laravel10plate-auth-models',
             '--force' => $this->option('force')
         ]);
         
@@ -175,7 +175,7 @@ class InstallCommand extends Command
         
         // Publish controllers
         $this->call('vendor:publish', [
-            '--tag' => 'laravelplate-auth-controllers',
+            '--tag' => 'laravel10plate-auth-controllers',
             '--force' => $this->option('force')
         ]);
     }

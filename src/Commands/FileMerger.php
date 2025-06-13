@@ -1,6 +1,6 @@
 <?php
 
-namespace Laravelplate\Authentication\Commands;
+namespace Laravel10plate\Authentication\Commands;
 
 trait FileMerger
 {
@@ -9,7 +9,7 @@ trait FileMerger
      */
     protected function createBackup($filePath)
     {
-        $backupPath = $filePath . '.laravelplate-backup-' . date('Y-m-d-H-i-s');
+        $backupPath = $filePath . '.laravel10plate-backup-' . date('Y-m-d-H-i-s');
         copy($filePath, $backupPath);
         $this->info("Backup created: " . basename($backupPath));
         return $backupPath;

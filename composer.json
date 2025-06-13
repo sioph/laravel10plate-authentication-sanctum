@@ -16,13 +16,13 @@
     },
     "autoload": {
         "psr-4": {
-            "Laravelplate\\Authentication\\": "src/"
+            "Laravel10plate\\Authentication\\": "src/"
         }
     },
     "extra": {
         "laravel": {
             "providers": [
-                "Laravelplate\\Authentication\\LaravelplateAuthenticationServiceProvider"
+                "Laravel10plate\\Authentication\\Laravel10plateAuthenticationServiceProvider"
             ]
         }
     },
