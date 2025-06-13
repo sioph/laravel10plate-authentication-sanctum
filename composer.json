@@ -1,6 +1,6 @@
 {
-    "name": "sioph/laravelplate-authentication-sanctum",
-    "description": "Laravel Sanctum authentication package for Laravelplate boilerplate",
+    "name": "sioph/laravel10plate-authentication-sanctum",
+    "description": "Laravel Sanctum authentication package for Laravel10plate boilerplate",
     "type": "library",
     "license": "MIT",
     "authors": [
